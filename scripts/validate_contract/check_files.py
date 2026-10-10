@@ -1,23 +1,33 @@
 from pathlib import Path
-from .constants import MAX_MODEL_SIZE_BYTES, REPO_ROOT
+from .constants import CheckResult, MAX_MODEL_SIZE_BYTES, REPO_ROOT
 
 
-def check_files(repo_root: Path = REPO_ROOT) -> None:
+def check_files(repo_root: Path = REPO_ROOT) -> list[CheckResult]:
+    results = []
     required = [
-        repo_root / "README.md",
-        repo_root / "evaluate.py",
-        repo_root / "submission" / "model.py",
-        repo_root / "submission" / "model.pth",
+        "README.md",
+        "evaluate.py",
+        "submission/model.py",
+        "submission/model.pth",
     ]
 
-    for path in required:
-        rel = path.relative_to(repo_root)
+    for rel in required:
+        path = repo_root / rel
         if not path.is_file():
-            raise FileNotFoundError(f"Missing required file: {rel}")
-        if path.stat().st_size == 0:
-            raise ValueError(f"File is empty (0 bytes): {rel}")
+            results.append(CheckResult(f"File: {rel}", False, "File missing"))
+        elif path.stat().st_size == 0:
+            results.append(CheckResult(f"File: {rel}", False, "File is empty (0 bytes)"))
+        else:
+            results.append(CheckResult(f"File: {rel}", True, "Present and non-empty"))
 
     pth_file = repo_root / "submission" / "model.pth"
-    size = pth_file.stat().st_size
-    if size > MAX_MODEL_SIZE_BYTES:
-        raise ValueError(f"submission/model.pth ({size / 1e6:.1f} MB) exceeds 500 MB limit")
+    if pth_file.is_file():
+        size = pth_file.stat().st_size
+        if size > MAX_MODEL_SIZE_BYTES:
+            results.append(CheckResult("File size: submission/model.pth", False, f"{size / 1e6:.1f} MB exceeds 500 MB limit"))
+        else:
+            results.append(CheckResult("File size: submission/model.pth", True, f"{size / 1e6:.1f} MB <= 500 MB"))
+    else:
+        results.append(CheckResult("File size: submission/model.pth", False, "File missing"))
+
+    return results
