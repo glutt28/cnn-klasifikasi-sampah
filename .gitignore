@@ -1,0 +1,39 @@
+# Environment & Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Datasets (katanya ga boleh)
+data/
+train/
+test/
+val/
+my_train/
+my_val/
+*.zip
+*.tar.gz
+*.tar
+
+# Logs & Training checkpoints
+logs/
+checkpoints/
+runs/
+wandb/
+eval_result*.json
+output.json
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
