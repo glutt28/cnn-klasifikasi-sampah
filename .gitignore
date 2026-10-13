@@ -1,17 +1,23 @@
-# Environment & Virtual Environments
+# Virtual environments
 .venv/
+.venv-*/
 venv/
 ENV/
 env/
 
-# Python cache & artifacts
+# Python caches / tooling
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Datasets (katanya ga boleh)
+# Local datasets (never commit course images)
+datasets/*
+!datasets/README.md
+!datasets/.gitkeep
 data/
 train/
 test/
@@ -22,15 +28,16 @@ my_val/
 *.tar.gz
 *.tar
 
-# Logs & Training checkpoints
+# Training/evaluation artifacts
 logs/
 checkpoints/
 runs/
+outputs/
 wandb/
 eval_result*.json
 output.json
 
-# IDE & OS
+# IDE / OS
 .vscode/
 .idea/
 *.swp

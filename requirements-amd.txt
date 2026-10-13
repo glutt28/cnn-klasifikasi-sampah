@@ -1,0 +1,5 @@
+# AMD ROCm 7.2 wheel set verified on this machine.
+# Install with scripts/install_amd.sh (or the command in docs/UNIREPLKNET_PIPELINE.md).
+-r requirements.txt
+torch==2.14.1+rocm7.2
+torchvision==0.29.1+rocm7.2

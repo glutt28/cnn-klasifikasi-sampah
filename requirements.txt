@@ -1,0 +1,8 @@
+# Default PyPI environment. For AMD ROCm, use requirements-amd.txt instead.
+torch>=2.2
+torchvision>=0.17
+numpy>=1.24
+scikit-learn>=1.3
+Pillow>=10
+huggingface_hub>=0.25
+tqdm>=4.66

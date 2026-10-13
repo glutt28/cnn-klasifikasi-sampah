@@ -1,0 +1,2 @@
+# No extra packages are required at inference time beyond torch and torchvision.
+# The UniRepLKNet architecture is included in unireplknet.py.
