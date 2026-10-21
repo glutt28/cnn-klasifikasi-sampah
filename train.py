@@ -66,8 +66,8 @@ def training_transform() -> transforms.Compose:
             transforms.RandomRotation(degrees=15),
             transforms.ColorJitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.05),
             transforms.RandomPerspective(distortion_scale=0.1, p=0.2),
-            transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0)),
-            transforms.RandomGrayscale(p=0.05), 
+            # transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0)),
+            # transforms.RandomGrayscale(p=0.05), 
             transforms.ToTensor(),
             transforms.Normalize(
                 mean=(0.485, 0.456, 0.406),
