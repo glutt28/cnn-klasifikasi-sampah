@@ -52,23 +52,28 @@ def seed_everything(seed: int) -> None:
 
 
 def training_transform() -> transforms.Compose:
-    """Use restrained augmentation to preserve material and shape cues."""
+    """Stronger augmentation for improved robustness while preserving material and shape cues."""
     return transforms.Compose(
         [
             transforms.RandomResizedCrop(
                 IMAGE_SIZE,
-                scale=(0.80, 1.0),
-                ratio=(0.85, 1.15),
+                scale=(0.70, 1.0),
+                ratio=(0.80, 1.20),
                 interpolation=InterpolationMode.BICUBIC,
             ),
             transforms.RandomHorizontalFlip(p=0.5),
-            transforms.ColorJitter(brightness=0.12, contrast=0.12, saturation=0.12, hue=0.02),
+            transforms.RandomVerticalFlip(p=0.3),
+            transforms.RandomRotation(degrees=15),
+            transforms.ColorJitter(brightness=0.25, contrast=0.25, saturation=0.25, hue=0.05),
+            transforms.RandomPerspective(distortion_scale=0.1, p=0.2),
+            transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0)),
+            transforms.RandomGrayscale(p=0.05), 
             transforms.ToTensor(),
             transforms.Normalize(
                 mean=(0.485, 0.456, 0.406),
                 std=(0.229, 0.224, 0.225),
             ),
-            transforms.RandomErasing(p=0.08, scale=(0.02, 0.08)),
+            transforms.RandomErasing(p=0.15, scale=(0.02, 0.15)),
         ]
     )
 
