@@ -12,20 +12,58 @@ Deep Learning (IF25-40401) · Teknik Informatika ITERA · Semester Ganjil 2026/2
 
 ## Ringkasan Pendekatan
 
-- *Arsitektur / backbone*: UniRepLKNet-S pretrained ImageNet-1K dengan classification head yang diinisialisasi ulang untuk klasifikasi 5 kelas: botol_plastik, gelas_plastik, kertas_kardus, saset_kemasan, dan styrofoam.
+**Arsitektur.** UniRepLKNet-S pretrained ImageNet-1K. Classification head diinisialisasi ulang untuk 5 kelas: `botol_plastik`, `gelas_plastik`, `kertas_kardus`, `saset_kemasan`, `styrofoam`. Seluruh parameter di-fine-tune (tanpa freezing), dengan `drop_path_rate=0.1`.
 
-- *Strategi pelatihan*: Fine-tuning seluruh parameter model tanpa freezing, menggunakan optimizer AdamW dengan learning rate berbeda untuk backbone (1e-5) dan classification head (3e-4), serta weight decay 0.03. Learning rate dijadwalkan menggunakan CosineAnnealingLR dengan T_max=20. Pelatihan maksimal 20 epoch, batch size 4, dan 4 DataLoader workers, dengan early stopping berdasarkan validation Macro-F1 (patience=6). Loss menggunakan weighted CrossEntropyLoss dengan class weighting seimbang dan label smoothing 0.02. Augmentasi meliputi RandomResizedCrop, RandomHorizontalFlip, ColorJitter, dan RandomErasing. Pelatihan menggunakan mixed precision FP16 jika CUDA tersedia dan gradient clipping dengan maximum norm 1.0. Checkpoint terbaik dipilih berdasarkan validation Macro-F1.
+**Strategi pelatihan.**
 
-- *Data tambahan*: Model menggunakan bobot pretrained ImageNet-1K sebagai inisialisasi. Checkpoint hasil fine-tuning model.pth (lebih dari 100 MB) tersedia di [GitHub Releases — Preview1](https://github.com/glutt28/cnn-klasifikasi-sampah/releases/tag/Preview1).
+| Komponen | Pengaturan |
+|---|---|
+| Optimizer | AdamW, weight decay 0.03 |
+| Learning rate | Backbone 1e-5, head 3e-4 |
+| Scheduler | CosineAnnealingLR (`T_max` = jumlah epoch) |
+| Loss | CrossEntropyLoss berbobot (class weighting seimbang), label smoothing 0.02 |
+| Presisi | Mixed precision FP16 (jika CUDA tersedia) |
+| Gradient clipping | Norma maksimum 1.0 |
+| Pemilihan checkpoint | Validation Macro-F1 terbaik |
+| Seed | 42 |
 
-- *Ukuran input & preprocessing*: Input RGB berukuran 224 × 224 piksel. Pada training, gambar diproses dengan RandomResizedCrop berukuran 224, skala crop 0.80–1.0, rasio aspek 0.85–1.15, dan interpolasi bicubic. Selanjutnya diterapkan augmentasi horizontal flip dan ColorJitter, konversi ke tensor, normalisasi menggunakan mean (0.485, 0.456, 0.406) dan standard deviation (0.229, 0.224, 0.225) dari ImageNet, lalu RandomErasing. Pada validasi dan inferensi, digunakan Resize 256 dengan interpolasi bicubic, CenterCrop 224, konversi ke tensor, dan normalisasi ImageNet tanpa augmentasi acak.
+**Konfigurasi per putaran.**
+
+| | Preview 1 | Preview 2 |
+|---|---|---|
+| Epoch | 20 | 40 |
+| Batch size | 4 | 4 |
+| DataLoader workers | 4 | 8 |
+| Early stopping | patience 6 | patience 6 |
+| Augmentasi | dasar (lihat di bawah) | diperkuat (lihat di bawah) |
+
+**Augmentasi training.**
+
+| Transformasi | Preview 1 | Preview 2 |
+|---|---|---|
+| RandomResizedCrop (224, bicubic) | scale 0.80–1.0, rasio 0.85–1.15 | scale 0.70–1.0, rasio 0.80–1.20 |
+| RandomHorizontalFlip | p=0.5 | p=0.5 |
+| RandomVerticalFlip | – | p=0.3 |
+| RandomRotation | – | ±15° |
+| ColorJitter | ±12% (hue ±2%) | ±25% (hue ±5%) |
+| RandomPerspective | – | distortion 0.1, p=0.2 |
+| RandomErasing | p=0.08, scale 0.02–0.08 | p=0.15, scale 0.02–0.15 |
+
+**Preprocessing.** Input RGB 224 × 224, dinormalisasi dengan mean `(0.485, 0.456, 0.406)` dan std `(0.229, 0.224, 0.225)` (ImageNet). Pada validasi dan inferensi tidak ada augmentasi acak: Resize 256 (bicubic) → CenterCrop 224 → ToTensor → Normalize.
+
+**Data tambahan.** Hanya bobot pretrained ImageNet-1K sebagai inisialisasi. Checkpoint hasil fine-tuning (`model.pth`, > 100 MB) disimpan di GitHub Releases:
+
+| Putaran | Unduh |
+|---|---|
+| Preview 1 | [model.pth](https://github.com/glutt28/cnn-klasifikasi-sampah/releases/download/Preview1/model.pth) atau https://github.com/glutt28/cnn-klasifikasi-sampah/releases/download/Preview1/model.pth |
+| Preview 2 | [model.pth](https://github.com/glutt28/cnn-klasifikasi-sampah/releases/download/Preview2/model.pth) atau https://github.com/glutt28/cnn-klasifikasi-sampah/releases/download/Preview2/model.pth |
 
 ## Hasil
 
 | Putaran | Commit | Macro-F1 (split validasi lokal) | Macro-F1 (diumumkan asisten) |
 |---------|--------|----------------------------------|------------------------------|
 | Preview 1 (14 Okt) | |0.9566| |
-| Preview 2 (21 Okt) | | | |
+| Preview 2 (21 Okt) | |0.9581 | |
 | Final (25 Okt)     | | | |
 
 Catatan eksperimen:
