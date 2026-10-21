@@ -12,9 +12,9 @@ Deep Learning (IF25-40401) · Teknik Informatika ITERA · Semester Ganjil 2026/2
 
 ## Ringkasan Pendekatan
 
-**Arsitektur.** UniRepLKNet-S pretrained ImageNet-1K. Classification head diinisialisasi ulang untuk 5 kelas: `botol_plastik`, `gelas_plastik`, `kertas_kardus`, `saset_kemasan`, `styrofoam`. Seluruh parameter di-fine-tune (tanpa freezing), dengan `drop_path_rate=0.1`.
+**Arsitektur:** UniRepLKNet-S pretrained ImageNet-1K. Classification head diinisialisasi ulang untuk 5 kelas: `botol_plastik`, `gelas_plastik`, `kertas_kardus`, `saset_kemasan`, `styrofoam`. Seluruh parameter di-fine-tune (tanpa freezing), dengan `drop_path_rate=0.1`.
 
-**Strategi pelatihan.**
+**Strategi pelatihan:**
 
 | Komponen | Pengaturan |
 |---|---|
@@ -27,7 +27,7 @@ Deep Learning (IF25-40401) · Teknik Informatika ITERA · Semester Ganjil 2026/2
 | Pemilihan checkpoint | Validation Macro-F1 terbaik |
 | Seed | 42 |
 
-**Konfigurasi per putaran.**
+**Konfigurasi per putaran:**
 
 | | Preview 1 | Preview 2 |
 |---|---|---|
@@ -37,7 +37,7 @@ Deep Learning (IF25-40401) · Teknik Informatika ITERA · Semester Ganjil 2026/2
 | Early stopping | patience 6 | patience 6 |
 | Augmentasi | dasar (lihat di bawah) | diperkuat (lihat di bawah) |
 
-**Augmentasi training.**
+**Augmentasi training:**
 
 | Transformasi | Preview 1 | Preview 2 |
 |---|---|---|
@@ -49,15 +49,13 @@ Deep Learning (IF25-40401) · Teknik Informatika ITERA · Semester Ganjil 2026/2
 | RandomPerspective | – | distortion 0.1, p=0.2 |
 | RandomErasing | p=0.08, scale 0.02–0.08 | p=0.15, scale 0.02–0.15 |
 
-**Preprocessing.** Input RGB 224 × 224, dinormalisasi dengan mean `(0.485, 0.456, 0.406)` dan std `(0.229, 0.224, 0.225)` (ImageNet). Pada validasi dan inferensi tidak ada augmentasi acak: Resize 256 (bicubic) → CenterCrop 224 → ToTensor → Normalize.
+**Preprocessing:** Input RGB 224 × 224, dinormalisasi dengan mean `(0.485, 0.456, 0.406)` dan std `(0.229, 0.224, 0.225)` (ImageNet). Pada validasi dan inferensi tidak ada augmentasi acak: Resize 256 (bicubic) → CenterCrop 224 → ToTensor → Normalize.
 
 ## Model weights
-
 Karena ukuran model lebih dari 100 MB, file model.pth disimpan di GitHub Release.
-
 Direct download: [model.pth](https://github.com/glutt28/cnn-klasifikasi-sampah/releases/download/Preview2/model.pth)
 
-**Data tambahan.** Hanya bobot pretrained ImageNet-1K sebagai inisialisasi. Checkpoint hasil fine-tuning (`model.pth`, > 100 MB) disimpan di GitHub Releases:
+**Data tambahan:** Hanya bobot pretrained ImageNet-1K sebagai inisialisasi. Checkpoint hasil fine-tuning (`model.pth`, > 100 MB) disimpan di GitHub Releases:
 
 | Putaran | Unduh |
 |---|---|
