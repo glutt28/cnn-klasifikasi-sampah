@@ -51,7 +51,7 @@ Deep Learning (IF25-40401) · Teknik Informatika ITERA · Semester Ganjil 2026/2
 
 **Preprocessing.** Input RGB 224 × 224, dinormalisasi dengan mean `(0.485, 0.456, 0.406)` dan std `(0.229, 0.224, 0.225)` (ImageNet). Pada validasi dan inferensi tidak ada augmentasi acak: Resize 256 (bicubic) → CenterCrop 224 → ToTensor → Normalize.
 
-##Model weights
+## Model weights
 
 Karena ukuran model lebih dari 100 MB, file model.pth disimpan di GitHub Release.
 
