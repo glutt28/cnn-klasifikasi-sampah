@@ -6,8 +6,8 @@ Deep Learning (IF25-40401) · Teknik Informatika ITERA · Semester Ganjil 2026/2
 
 | No | Nama Lengkap | NIM | Kontribusi utama |
 |----|--------------|-----|------------------|
-|1|Michael Mathew|123140101|Mencoba membangun arsitektur EfficientNet (tidak dipilih)|
-|2|Varasina Farmadani|123140107|Membangun arsitektur UniRepLKNet-S (dipilih)|
+|1|Michael Mathew|123140101|Augmentasi Dataset|
+|2|Varasina Farmadani|123140107|Hyperparameter Tuning|
 |3||||
 
 ## Ringkasan Pendekatan
@@ -51,6 +51,12 @@ Deep Learning (IF25-40401) · Teknik Informatika ITERA · Semester Ganjil 2026/2
 
 **Preprocessing.** Input RGB 224 × 224, dinormalisasi dengan mean `(0.485, 0.456, 0.406)` dan std `(0.229, 0.224, 0.225)` (ImageNet). Pada validasi dan inferensi tidak ada augmentasi acak: Resize 256 (bicubic) → CenterCrop 224 → ToTensor → Normalize.
 
+##Model weights
+
+Karena ukuran model lebih dari 100 MB, file model.pth disimpan di GitHub Release.
+
+Direct download: [model.pth](https://github.com/glutt28/cnn-klasifikasi-sampah/releases/download/Preview2/model.pth)
+
 **Data tambahan.** Hanya bobot pretrained ImageNet-1K sebagai inisialisasi. Checkpoint hasil fine-tuning (`model.pth`, > 100 MB) disimpan di GitHub Releases:
 
 | Putaran | Unduh |
@@ -60,11 +66,11 @@ Deep Learning (IF25-40401) · Teknik Informatika ITERA · Semester Ganjil 2026/2
 
 ## Hasil
 
-| Putaran | Commit | Macro-F1 (split validasi lokal) | Macro-F1 (diumumkan asisten) |
-|---------|--------|----------------------------------|------------------------------|
-| Preview 1 (14 Okt) | |0.9566| |
-| Preview 2 (21 Okt) | |0.9581 | |
-| Final (25 Okt)     | | | |
+| Putaran | Macro-F1 (split validasi lokal) | Macro-F1 (diumumkan asisten) |
+|---------|----------------------------------|------------------------------|
+| Preview 1 (14 Okt)|0.9566| |
+| Preview 2 (21 Okt)|0.9581 | |
+| Final (25 Okt)| | |
 
 Catatan eksperimen:
 Strategi di atas dilakukan dengan konfigurasi learning rate, optimizer, scheduler, loss, augmentasi, dan early stopping berada di train.py, sedangkan ukuran input serta transformasi validasi dan inferensi ditentukan oleh submission/model.py. 
