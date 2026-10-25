@@ -39,6 +39,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--patience", type=int, default=6, help="Early-stopping patience; 0 disables it")
     parser.add_argument("--class-weighting", choices=("balanced", "none"), default="balanced")
     parser.add_argument("--no-pretrained", action="store_true", help="Train from random initialization")
+    parser.add_argument(
+        "--image-size", type=int, default=IMAGE_SIZE,
+        help=f"Input resolution for training/validation (default {IMAGE_SIZE}, from submission/model.py). "
+             "Evaluation always uses IMAGE_SIZE in submission/model.py, so edit that constant to match.",
+    )
+    parser.add_argument(
+        "--benchmark", action="store_true",
+        help="Enable cudnn/MIOpen benchmark mode. On ROCm this triggers an exhaustive kernel search "
+             "for every new tensor shape, which can take hours. Off by default.",
+    )
     return parser.parse_args()
 
 
@@ -48,15 +58,14 @@ def seed_everything(seed: int) -> None:
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.benchmark = torch.cuda.is_available()
 
 
-def training_transform() -> transforms.Compose:
+def training_transform(image_size: int = IMAGE_SIZE) -> transforms.Compose:
     """Stronger augmentation for improved robustness while preserving material and shape cues."""
     return transforms.Compose(
         [
             transforms.RandomResizedCrop(
-                IMAGE_SIZE,
+                image_size,
                 scale=(0.70, 1.0),
                 ratio=(0.80, 1.20),
                 interpolation=InterpolationMode.BICUBIC,
@@ -78,14 +87,14 @@ def training_transform() -> transforms.Compose:
     )
 
 
-def load_datasets(train_dir: Path, val_dir: Path):
+def load_datasets(train_dir: Path, val_dir: Path, image_size: int = IMAGE_SIZE):
     train_dir, val_dir = train_dir.resolve(), val_dir.resolve()
     for name, path in (("training", train_dir), ("validation", val_dir)):
         if not path.is_dir():
             raise FileNotFoundError(f"{name.capitalize()} directory not found: {path}\nRun python scripts/setup_dataset.py first.")
 
-    train_dataset = ImageFolder(train_dir, transform=training_transform())
-    val_dataset = ImageFolder(val_dir, transform=get_transform())
+    train_dataset = ImageFolder(train_dir, transform=training_transform(image_size))
+    val_dataset = ImageFolder(val_dir, transform=get_transform(image_size))
     for name, dataset in (("training", train_dataset), ("validation", val_dataset)):
         if tuple(dataset.classes) != CLASS_NAMES:
             raise ValueError(
@@ -193,9 +202,13 @@ def main() -> None:
         raise ValueError("--epochs and --batch-size must be positive; --workers cannot be negative")
     if args.patience < 0:
         raise ValueError("--patience cannot be negative")
+    if args.image_size < 32:
+        raise ValueError("--image-size must be at least 32")
     seed_everything(args.seed)
+    torch.backends.cudnn.benchmark = args.benchmark and torch.cuda.is_available()
 
-    train_dataset, val_dataset = load_datasets(args.train_dir, args.val_dir)
+    train_dataset, val_dataset = load_datasets(args.train_dir, args.val_dir, args.image_size)
+    size_mismatch = args.image_size != IMAGE_SIZE
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     train_loader = make_loader(train_dataset, args.batch_size, True, args.workers, device, args.seed)
     val_loader = make_loader(val_dataset, args.batch_size, False, args.workers, device, args.seed)
@@ -207,6 +220,11 @@ def main() -> None:
     print(f"Val images   : {len(val_dataset)}")
     print(f"Class order  : {list(CLASS_NAMES)}")
     print(f"Pretrained   : {not args.no_pretrained}")
+    print(f"Image size   : {args.image_size}")
+    print(f"Benchmark    : {torch.backends.cudnn.benchmark}")
+    if size_mismatch:
+        print(f"WARNING: --image-size {args.image_size} != IMAGE_SIZE={IMAGE_SIZE} in submission/model.py. "
+              "Set IMAGE_SIZE in model.py to the same value before evaluating or submitting.")
 
     model = build_model(len(CLASS_NAMES), pretrained=not args.no_pretrained).to(device)
     weights = class_weights(train_dataset, device) if args.class_weighting == "balanced" else None
@@ -279,6 +297,9 @@ def main() -> None:
     print(f"Best local validation F1    : {best_f1:.4f}")
     print(f"Model state_dict            : {args.output}")
     print(f"Training history            : {args.history}")
+    print(f"Trained at image size       : {args.image_size}")
+    if size_mismatch:
+        print(f"!! Set IMAGE_SIZE = {args.image_size} in submission/model.py, otherwise evaluation uses {IMAGE_SIZE}.")
 
 
 if __name__ == "__main__":
