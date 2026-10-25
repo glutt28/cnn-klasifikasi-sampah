@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 env:
-  RELEASE_TAG: Preview2
+  RELEASE_TAG: final
   MODEL_ASSET: model.pth
 
 jobs:
