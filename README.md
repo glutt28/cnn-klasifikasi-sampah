@@ -8,7 +8,6 @@ Deep Learning (IF25-40401) · Teknik Informatika ITERA · Semester Ganjil 2026/2
 |----|--------------|-----|------------------|
 |1|Michael Mathew|123140101|Augmentasi Dataset|
 |2|Varasina Farmadani|123140107|Hyperparameter Tuning|
-|3||||
 
 ## Ringkasan Pendekatan
 
@@ -29,31 +28,31 @@ Deep Learning (IF25-40401) · Teknik Informatika ITERA · Semester Ganjil 2026/2
 
 **Konfigurasi per putaran:**
 
-| | Preview 1 | Preview 2 |
-|---|---|---|
-| Epoch | 20 | 40 |
-| Batch size | 4 | 4 |
-| DataLoader workers | 4 | 8 |
-| Early stopping | patience 6 | patience 6 |
-| Augmentasi | dasar (lihat di bawah) | diperkuat (lihat di bawah) |
+| | Preview 1 | Preview 2 | Preview 3 |
+|---|---|---|---|
+| Epoch | 20 | 40 | 40 |
+| Batch size | 4 | 4 | 4 |
+| DataLoader workers | 4 | 8 | 8 |
+| Early stopping | patience 6 | patience 6 | patience 12 |
+| Augmentasi | - |dasar (lihat di bawah) | perubahan input RGB ke 288 x 288 |
 
 **Augmentasi training:**
 
-| Transformasi | Preview 1 | Preview 2 |
-|---|---|---|
-| RandomResizedCrop (224, bicubic) | scale 0.80–1.0, rasio 0.85–1.15 | scale 0.70–1.0, rasio 0.80–1.20 |
-| RandomHorizontalFlip | p=0.5 | p=0.5 |
-| RandomVerticalFlip | – | p=0.3 |
-| RandomRotation | – | ±15° |
-| ColorJitter | ±12% (hue ±2%) | ±25% (hue ±5%) |
-| RandomPerspective | – | distortion 0.1, p=0.2 |
-| RandomErasing | p=0.08, scale 0.02–0.08 | p=0.15, scale 0.02–0.15 |
+| Transformasi | Preview 1 | Preview 2 | Preview 3 |
+|---|---|---|---|
+| RandomResizedCrop (224, bicubic) | scale 0.80–1.0, rasio 0.85–1.15 | scale 0.70–1.0, rasio 0.80–1.20 | scale 0.70–1.0, rasio 0.80–1.20 |  
+| RandomHorizontalFlip | p=0.5 | p=0.5 | p=0.5 |
+| RandomVerticalFlip | – | p=0.3 | p=0.3 |
+| RandomRotation | – | ±15° | ±15° |
+| ColorJitter | ±12% (hue ±2%) | ±25% (hue ±5%) | ±25% (hue ±5%) |
+| RandomPerspective | – | distortion 0.1, p=0.2 | distortion 0.1, p=0.2 |
+| RandomErasing | p=0.08, scale 0.02–0.08 | p=0.15, scale 0.02–0.15 | p=0.15, scale 0.02–0.15 |
 
-**Preprocessing:** Input RGB 224 × 224, dinormalisasi dengan mean `(0.485, 0.456, 0.406)` dan std `(0.229, 0.224, 0.225)` (ImageNet). Pada validasi dan inferensi tidak ada augmentasi acak: Resize 256 (bicubic) → CenterCrop 224 → ToTensor → Normalize.
+**Preprocessing:** Input RGB 288 x 288, dinormalisasi dengan mean `(0.485, 0.456, 0.406)` dan std `(0.229, 0.224, 0.225)` (ImageNet). Pada validasi dan inferensi tidak ada augmentasi acak: Resize 256 (bicubic) → CenterCrop 224 → ToTensor → Normalize.
 
 ## Model weights
 Karena ukuran model lebih dari 100 MB, file model.pth disimpan di GitHub Release.
-Direct download: [model.pth](https://github.com/glutt28/cnn-klasifikasi-sampah/releases/download/Preview2/model.pth)
+Direct download: [model.pth](https://github.com/glutt28/cnn-klasifikasi-sampah/releases/download/final/model.pth)
 
 **Data tambahan:** Hanya bobot pretrained ImageNet-1K sebagai inisialisasi. Checkpoint hasil fine-tuning (`model.pth`, > 100 MB) disimpan di GitHub Releases:
 
@@ -61,14 +60,15 @@ Direct download: [model.pth](https://github.com/glutt28/cnn-klasifikasi-sampah/r
 |---|---|
 | Preview 1 | [model.pth](https://github.com/glutt28/cnn-klasifikasi-sampah/releases/download/Preview1/model.pth) atau https://github.com/glutt28/cnn-klasifikasi-sampah/releases/download/Preview1/model.pth |
 | Preview 2 | [model.pth](https://github.com/glutt28/cnn-klasifikasi-sampah/releases/download/Preview2/model.pth) atau https://github.com/glutt28/cnn-klasifikasi-sampah/releases/download/Preview2/model.pth |
+| Preview 3 | [model.pth](https://github.com/glutt28/cnn-klasifikasi-sampah/releases/download/final/model.pth) atau https://github.com/glutt28/cnn-klasifikasi-sampah/releases/download/final/model.pth |
 
 ## Hasil
 
 | Putaran | Macro-F1 (split validasi lokal) | Macro-F1 (diumumkan asisten) |
 |---------|----------------------------------|------------------------------|
-| Preview 1 (14 Okt)|0.9566| |
-| Preview 2 (21 Okt)|0.9581 | |
-| Final (25 Okt)| | |
+| Preview 1 (14 Okt)|0.9566| - |
+| Preview 2 (21 Okt)|0.9581 | 0.9461 |
+| Final (25 Okt)|0.9734| |
 
 Catatan eksperimen:
 Strategi di atas dilakukan dengan konfigurasi learning rate, optimizer, scheduler, loss, augmentasi, dan early stopping berada di train.py, sedangkan ukuran input serta transformasi validasi dan inferensi ditentukan oleh submission/model.py. 
