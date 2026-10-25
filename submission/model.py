@@ -18,7 +18,7 @@ CLASS_NAMES = (
     "styrofoam",
 )
 
-IMAGE_SIZE = 224
+IMAGE_SIZE = 288
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
@@ -28,12 +28,12 @@ def get_model():
     return unireplknet_s(num_classes=len(CLASS_NAMES), attempt_use_lk_impl=False)
 
 
-def get_transform():
+def get_transform(image_size: int = IMAGE_SIZE):
     """Return the deterministic PIL RGB -> normalized tensor transform."""
     return transforms.Compose(
         [
-            transforms.Resize(256, interpolation=InterpolationMode.BICUBIC),
-            transforms.CenterCrop(IMAGE_SIZE),
+            transforms.Resize(round(image_size * 256 / 224), interpolation=InterpolationMode.BICUBIC),
+            transforms.CenterCrop(image_size),
             transforms.ToTensor(),
             transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
         ]
