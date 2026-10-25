@@ -7,6 +7,7 @@ The script does not read train_sources.csv or download individual images.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import random
@@ -55,6 +56,24 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--output", type=Path, default=Path("datasets/split"))
     parser.add_argument("--val-size", type=float, default=0.20, help="Validation fraction per class (0.05-0.50)")
+    parser.add_argument(
+        "--test-size", type=float, default=0.0,
+        help="Held-out test fraction per class (0 = no test split, otherwise 0.05-0.40). "
+             "Carved out of what would otherwise be the training set, so the validation set is unchanged.",
+    )
+    parser.add_argument(
+        "--max-per-class", type=int, default=None,
+        help="Use at most N images per class (random, seeded). Handy for quick experiments.",
+    )
+    parser.add_argument(
+        "--balance", action="store_true",
+        help="Undersample every class to the size of the smallest class (after --dedupe). "
+             "Applied before the split, so train/val/test are all balanced. Discards data.",
+    )
+    parser.add_argument(
+        "--dedupe", action="store_true",
+        help="Drop byte-identical duplicate images before splitting (prevents train/val/test leakage).",
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--mode", choices=("auto", "hardlink", "copy"), default="auto")
     parser.add_argument("--force", action="store_true", help="Replace only the generated split directory")
@@ -199,14 +218,62 @@ def collect_records(source: Path) -> tuple[list[ImageRecord], dict[str, int], li
     return records, counts, invalid
 
 
-def split_records(records: list[ImageRecord], fraction: float, seed: int):
+def file_digest(path: Path) -> str:
+    digest = hashlib.sha1()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def drop_duplicates(records: list[ImageRecord]) -> tuple[list[ImageRecord], int]:
+    """Remove byte-identical images (first occurrence wins, across all classes)."""
+    seen: dict[str, ImageRecord] = {}
+    kept: list[ImageRecord] = []
+    for record in records:
+        key = file_digest(record.path)
+        if key in seen:
+            continue
+        seen[key] = record
+        kept.append(record)
+    return kept, len(records) - len(kept)
+
+
+def split_records(
+    records: list[ImageRecord], val_fraction: float, test_fraction: float,
+    seed: int, max_per_class: int | None = None,
+):
+    """Stratified split. Order per class: shuffled -> val, then test, then train.
+
+    Validation is taken first, so with the same seed and val fraction it is identical
+    whether or not a test split is requested.
+    """
     plans: dict[str, dict[str, list[ImageRecord]]] = {}
     for index, label in enumerate(CLASS_NAMES):
-        class_records = [record for record in records if record.label == label]
-        shuffled = list(class_records)
+        shuffled = [record for record in records if record.label == label]
         random.Random(seed + index).shuffle(shuffled)
-        val_count = min(len(shuffled) - 1, max(1, round(len(shuffled) * fraction)))
-        plans[label] = {"val": shuffled[:val_count], "train": shuffled[val_count:]}
+        if max_per_class is not None:
+            shuffled = shuffled[:max_per_class]
+        total = len(shuffled)
+        min_needed = 3 if test_fraction > 0 else 2
+        if total < min_needed:
+            raise ValueError(f"Class {label!r} has {total} image(s) after filtering; need at least {min_needed}.")
+
+        val_count = max(1, round(total * val_fraction))
+        test_count = max(1, round(total * test_fraction)) if test_fraction > 0 else 0
+        # Always keep at least one training image.
+        while val_count + test_count > total - 1:
+            if test_count > 1:
+                test_count -= 1
+            elif val_count > 1:
+                val_count -= 1
+            else:
+                break
+        plans[label] = {
+            "val": shuffled[:val_count],
+            "test": shuffled[val_count:val_count + test_count],
+            "train": shuffled[val_count + test_count:],
+        }
     return plans
 
 
@@ -229,15 +296,15 @@ def materialize(source: Path, destination: Path, mode: str) -> str:
 
 
 def prepare_split(
-    records: list[ImageRecord], output: Path, fraction: float, seed: int,
-    mode: str, force: bool, source: Path,
+    records: list[ImageRecord], output: Path, fraction: float, test_fraction: float, seed: int,
+    mode: str, force: bool, source: Path, max_per_class: int | None = None,
 ) -> None:
     output = output.expanduser().resolve()
     source = source.expanduser().resolve()
     if is_within(output, source) or is_within(source, output):
         raise ValueError(f"Split output and dataset source cannot overlap. Source={source}; output={output}")
 
-    plans = split_records(records, fraction, seed)
+    plans = split_records(records, fraction, test_fraction, seed, max_per_class)
     if output.exists():
         if not force:
             raise FileExistsError(f"Split output already exists: {output}\nUse --force to regenerate only this split.")
@@ -246,9 +313,11 @@ def prepare_split(
         shutil.rmtree(output)
 
     linked = copied = 0
-    counts: dict[str, dict[str, int]] = {"train": {}, "val": {}}
+    split_names = ["train", "val"] + (["test"] if test_fraction > 0 else [])
+    counts: dict[str, dict[str, int]] = {name: {} for name in split_names}
     for label in CLASS_NAMES:
-        for split_name, items in plans[label].items():
+        for split_name in split_names:
+            items = plans[label][split_name]
             counts[split_name][label] = len(items)
             for item in items:
                 action = materialize(item.path, output / split_name / label / item.relative_path, mode)
@@ -259,6 +328,8 @@ def prepare_split(
         "source": str(source),
         "seed": seed,
         "validation_fraction": fraction,
+        "test_fraction": test_fraction,
+        "max_per_class": max_per_class,
         "class_names": list(CLASS_NAMES),
         "counts": counts,
         "file_materialization": {"hardlinked": linked, "copied": copied},
@@ -268,13 +339,18 @@ def prepare_split(
     print(f"Dataset source : {source}")
     print(f"Split output   : {output}")
     print(f"Validation     : {fraction:.0%} per class")
+    if test_fraction > 0:
+        print(f"Test           : {test_fraction:.0%} per class (do NOT tune on this)")
     print(f"Random seed    : {seed}")
-    print(f"{'Class':<18} {'Train':>7} {'Val':>7} {'Total':>7}")
-    print("-" * 42)
+    header = f"{'Class':<18} {'Train':>7} {'Val':>7}" + (f" {'Test':>7}" if test_fraction > 0 else "") + f" {'Total':>7}"
+    print(header)
+    print("-" * len(header))
     for label in CLASS_NAMES:
-        train_count = counts["train"][label]
-        val_count = counts["val"][label]
-        print(f"{label:<18} {train_count:>7} {val_count:>7} {train_count + val_count:>7}")
+        row = [counts[name][label] for name in split_names]
+        line = f"{label:<18} {row[0]:>7} {row[1]:>7}"
+        if test_fraction > 0:
+            line += f" {row[2]:>7}"
+        print(line + f" {sum(row):>7}")
     print(f"\nCreated {linked} hardlinks and {copied} copies.")
     print("Dataset setup complete. The original dataset was not modified.")
 
@@ -283,6 +359,12 @@ def main() -> None:
     args = parse_args()
     if not 0.05 <= args.val_size <= 0.50:
         raise ValueError("--val-size must be between 0.05 and 0.50")
+    if args.test_size != 0 and not 0.05 <= args.test_size <= 0.40:
+        raise ValueError("--test-size must be 0 (disabled) or between 0.05 and 0.40")
+    if args.val_size + args.test_size > 0.60:
+        raise ValueError("--val-size + --test-size must not exceed 0.60 (training set would be too small)")
+    if args.max_per_class is not None and args.max_per_class < 3:
+        raise ValueError("--max-per-class must be at least 3")
     if args.source is not None and args.archive is not None:
         raise ValueError("Use either --source or --archive, not both.")
 
@@ -316,9 +398,23 @@ def main() -> None:
         print(f"Skipped invalid/unreadable images: {len(invalid)}")
         for path in invalid[:5]:
             print(f"  - {path}")
+    if args.dedupe:
+        records, removed = drop_duplicates(records)
+        print(f"Removed {removed} byte-identical duplicate image(s)")
     print(f"Total valid images: {len(records)}")
 
-    prepare_split(records, output, args.val_size, args.seed, args.mode, args.force, source)
+    max_per_class = args.max_per_class
+    if args.balance:
+        per_class = {name: sum(r.label == name for r in records) for name in CLASS_NAMES}
+        smallest = min(per_class.values())
+        max_per_class = smallest if max_per_class is None else min(smallest, max_per_class)
+        discarded = sum(count - max_per_class for count in per_class.values() if count > max_per_class)
+        print(f"Balancing: every class capped at {max_per_class} (smallest class); discarding {discarded} image(s)")
+
+    prepare_split(
+        records, output, args.val_size, args.test_size, args.seed,
+        args.mode, args.force, source, max_per_class,
+    )
 
 
 if __name__ == "__main__":
