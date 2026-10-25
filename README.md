@@ -28,7 +28,7 @@ Deep Learning (IF25-40401) · Teknik Informatika ITERA · Semester Ganjil 2026/2
 
 **Konfigurasi per putaran:**
 
-| | Preview 1 | Preview 2 | Preview 3 |
+| | Preview 1 | Preview 2 | Final |
 |---|---|---|---|
 | Epoch | 20 | 40 | 40 |
 | Batch size | 4 | 4 | 4 |
@@ -38,7 +38,7 @@ Deep Learning (IF25-40401) · Teknik Informatika ITERA · Semester Ganjil 2026/2
 
 **Augmentasi training:**
 
-| Transformasi | Preview 1 | Preview 2 | Preview 3 |
+| Transformasi | Preview 1 | Preview 2 | Final |
 |---|---|---|---|
 | RandomResizedCrop (224, bicubic) | scale 0.80–1.0, rasio 0.85–1.15 | scale 0.70–1.0, rasio 0.80–1.20 | scale 0.70–1.0, rasio 0.80–1.20 |  
 | RandomHorizontalFlip | p=0.5 | p=0.5 | p=0.5 |
